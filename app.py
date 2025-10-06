@@ -15,8 +15,14 @@ app = Flask(__name__)
 CORS(app)
 
 # Database configuration
-# Use environment variable for production, fallback to SQLite for development
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///medicine_guide.db')
+# For serverless, we'll use an in-memory database or external database
+if os.environ.get('VERCEL'):
+    # Use in-memory SQLite for Vercel (temporary solution)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    # Use file-based SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///medicine_guide.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 # Use /tmp for Vercel, uploads for local development
@@ -174,15 +180,44 @@ def symptom_check():
 # Initialize database tables
 def init_db():
     """Initialize database tables"""
-    with app.app_context():
+    try:
+        with app.app_context():
+            db.create_all()
+            # Add some sample data for in-memory database
+            if not Medicine.query.first():
+                sample_medicine = Medicine(
+                    name="Paracetamol",
+                    generic_name="Acetaminophen",
+                    description="Pain reliever and fever reducer",
+                    category="Analgesic",
+                    manufacturer="Various",
+                    severity_level="mild"
+                )
+                db.session.add(sample_medicine)
+                db.session.commit()
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+
+# Initialize for local development
+if not os.environ.get('VERCEL'):
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except:
+        pass
+    init_db()
+
+# Initialize database tables for production
+with app.app_context():
+    try:
         db.create_all()
+    except Exception as e:
+        print(f"Database error: {e}")
 
-# Create upload directory if it doesn't exist
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Initialize database on startup
-init_db()
-
-# Vercel requires the app to be available at module level
+# For local development
 if __name__ == '__main__':
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    except:
+        pass
+    init_db()
     app.run(debug=True)
