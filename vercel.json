@@ -13,6 +13,7 @@
     }
   ],
   "env": {
+    "PYTHON_VERSION": "3.9",
     "UPLOAD_FOLDER": "/tmp/uploads",
     "VERCEL": "1"
   }
