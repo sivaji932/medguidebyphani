@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Guide</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin: 20px 0; }
+        input, textarea, button { padding: 10px; margin: 5px 0; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin-top: 20px; padding: 15px; background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Medicine Guide & Symptom Checker</h1>
+        
+        <div class="form-group">
+            <h3>Symptom Checker</h3>
+            <textarea id="symptoms" placeholder="Enter your symptoms (comma separated)" rows="4" cols="50"></textarea><br>
+            <input type="number" id="age" placeholder="Age" min="1" max="120"><br>
+            <select id="gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+            </select><br>
+            <button onclick="checkSymptoms()">Check Symptoms</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function checkSymptoms() {
+            const symptoms = document.getElementById('symptoms').value;
+            const age = document.getElementById('age').value;
+            const gender = document.getElementById('gender').value;
+            
+            if (!symptoms) {
+                alert('Please enter symptoms');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/symptom-check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        symptoms: symptoms,
+                        age: parseInt(age) || 25,
+                        gender: gender
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = `
+                    <h4>Possible Conditions:</h4>
+                    <ul>${data.predicted_diseases.map(disease => `<li>${disease}</li>`).join('')}</ul>
+                    <p><strong>Recommendation:</strong> ${data.recommendations}</p>
+                `;
+                document.getElementById('result').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error checking symptoms');
+            }
+        }
+    </script>
+</body>
+</html>
